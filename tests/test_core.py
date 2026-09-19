@@ -176,6 +176,38 @@ def test_chunk_audio_invalid_duration_raises(tmp_path):
     assert str(src) in exc_info.value.args[0]
     mock_ffmpeg.assert_not_called()
 
+def test_chunk_audio_small_but_long_file_splits_by_duration(tmp_path):
+    src = tmp_path / "meeting.m4a"
+    src.write_bytes(b"x")
+    # 1 MB over 2569s (43 min): under the size limit, but over 600s duration.
+    # 2569 / ceil(2569/600)=5 -> 513s segments (size-derived value is far larger).
+    with patch("core.os.path.getsize", return_value=1 * 1024 * 1024), \
+         patch("core.get_audio_duration", return_value=2569.0), \
+         patch("core._ffmpeg") as mock_ffmpeg:
+        chunk_audio(str(src))
+    args = mock_ffmpeg.call_args.args
+    assert args[args.index("-segment_time") + 1] == "513"
+
+def test_chunk_audio_duration_limit_wins_over_size_limit(tmp_path):
+    src = tmp_path / "big.mp3"
+    src.write_bytes(b"x")
+    # 50 MB over 1200s: size-derived 570s, duration-derived 1200/2=600s -> 570s.
+    with patch("core.os.path.getsize", return_value=50 * 1024 * 1024), \
+         patch("core.get_audio_duration", return_value=1200.0), \
+         patch("core._ffmpeg") as mock_ffmpeg:
+        chunk_audio(str(src), max_size_mb=25)
+    args = mock_ffmpeg.call_args.args
+    assert args[args.index("-segment_time") + 1] == "570"
+
+def test_chunk_audio_within_both_limits_passthrough(tmp_path):
+    src = tmp_path / "short.mp3"
+    src.write_bytes(b"x")
+    with patch("core.os.path.getsize", return_value=5 * 1024 * 1024), \
+         patch("core.get_audio_duration", return_value=300.0), \
+         patch("core._ffmpeg") as mock_ffmpeg:
+        assert chunk_audio(str(src)) == [str(src)]
+    mock_ffmpeg.assert_not_called()
+
 # --- transcribe_audio ---
 
 def test_transcribe_audio_calls_client_and_strips(tmp_path):

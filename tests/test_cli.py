@@ -448,7 +448,7 @@ def test_run_transcription_pipeline_feedback_and_transcript_callbacks():
         )
     assert ("transcribe", "active") in feedback_events
     assert ("transcribe", "done") in feedback_events
-    assert ("post_process", "done") in feedback_events
+    assert ("post_process", "skipped") in feedback_events
     assert transcript_events == ["text"]
 
 def test_run_transcription_pipeline_cleans_up_chunks():
@@ -466,6 +466,56 @@ def test_run_transcription_pipeline_cleans_up_chunks():
             )
         assert not chunk0.exists()
         assert original.exists()
+
+
+def test_process_file_for_tui_raw_mode_bypasses_llm(tmp_path):
+    """Filesystem-file raw mode must never touch the LLM.
+
+    Guards the TUI 'Raw transcription' radio path: with pre_process_mode='raw'
+    the pipeline returns STT text unchanged, never requires an LLM client
+    (llm_client stays None) and never calls process_with_llm.
+    """
+    import main
+    src = tmp_path / "meeting.m4a"
+    src.write_bytes(b"fake-audio")
+    settings = {"pre_process_mode": "raw", "stt_model": "m", "llm_model": "m"}
+    fake_manager = MagicMock()
+    fake_manager.add_prompt.return_value = 5
+    with patch.object(main, "prompt_manager", fake_manager), \
+         patch.object(main, "stt_client", object()), \
+         patch.object(main, "llm_client", None), \
+         patch("main.require_stt_client", return_value=MagicMock()), \
+         patch("main.chunk_audio", side_effect=lambda f: [f]), \
+         patch("main.transcribe_audio", return_value=("raw words", "german")), \
+         patch("main.process_with_llm") as mock_llm, \
+         patch("main.require_llm_client", side_effect=AssertionError("LLM must not be required in raw mode")):
+        result = main.process_file_for_tui(str(src), settings)
+    mock_llm.assert_not_called()
+    assert result["text"] == "raw words"
+    assert result["raw_text"] == "raw words"
+    fake_manager.add_prompt.assert_called_once_with("raw words", result["file_path"])
+
+
+def test_process_file_for_tui_english_mode_uses_llm(tmp_path):
+    """Companion: english mode DOES post-process via the LLM (test above is non-vacuous)."""
+    import main
+    src = tmp_path / "meeting.m4a"
+    src.write_bytes(b"fake-audio")
+    settings = {"pre_process_mode": "english", "stt_model": "m", "llm_model": "m"}
+    fake_manager = MagicMock()
+    fake_manager.add_prompt.return_value = 6
+    with patch.object(main, "prompt_manager", fake_manager), \
+         patch.object(main, "stt_client", object()), \
+         patch.object(main, "llm_client", object()), \
+         patch("main.require_stt_client", return_value=MagicMock()), \
+         patch("main.require_llm_client", return_value=MagicMock()), \
+         patch("main.chunk_audio", side_effect=lambda f: [f]), \
+         patch("main.transcribe_audio", return_value=("raw words", "german")), \
+         patch("main.process_with_llm", return_value="polished") as mock_llm:
+        result = main.process_file_for_tui(str(src), settings)
+    mock_llm.assert_called_once()
+    assert result["text"] == "polished"
+    assert result["raw_text"] == "raw words"
 
 def test_wrap_text_short():
     """Test that wrap_text doesn't wrap short text."""

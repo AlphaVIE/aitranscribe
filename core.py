@@ -1,3 +1,4 @@
+import math
 import os
 import subprocess
 from pathlib import Path
@@ -50,24 +51,33 @@ def compress_audio(file_path: str, output_path: str | None = None) -> str:
     return output_path
 
 
-def chunk_audio(file_path: str, max_size_mb: int = 25) -> list[str]:
-    """Split audio into chunks sized to stay under max_size_mb.
+def chunk_audio(file_path: str, max_size_mb: int = 25, max_duration_s: int = 600) -> list[str]:
+    """Split audio into chunks sized to stay under max_size_mb and max_duration_s.
 
-    Segment length is derived from the file's bitrate so each chunk fits
-    the size limit (with a 5% margin for keyframe-aligned cut points).
-    Files already within the limit are returned unsplit.
+    Segment length is the smaller of the size-derived value (from the file's
+    bitrate, with a 5% margin for keyframe-aligned cut points) and the
+    duration-derived value (even split so every chunk is within max_duration_s).
+    Files already within both limits are returned unsplit. A file that is
+    small but long (e.g. a 43-minute Zoom recording under 25 MB) is still
+    split, because STT backends truncate very long single uploads.
     """
     file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-    if file_size_mb <= max_size_mb:
+    try:
+        duration = get_audio_duration(file_path)
+    except Exception:
+        duration = 0.0
+    if file_size_mb <= max_size_mb and (duration <= 0 or duration <= max_duration_s):
         return [file_path]
 
-    duration = get_audio_duration(file_path)
     if duration <= 0:
         raise RuntimeError(
             f"Cannot chunk audio: invalid duration ({duration}s) for {file_path}"
         )
     rate_mb_per_s = file_size_mb / duration
-    segment_time = max(60, int((max_size_mb / rate_mb_per_s) * 0.95))
+    size_based = int((max_size_mb / rate_mb_per_s) * 0.95)
+    num_chunks = max(1, math.ceil(duration / max_duration_s))
+    duration_based = int(duration / num_chunks)
+    segment_time = max(60, min(size_based, duration_based))
 
     file_name = Path(file_path).stem
     file_ext = Path(file_path).suffix

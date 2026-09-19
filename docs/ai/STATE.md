@@ -1,25 +1,22 @@
 # Project State
 
-Current status as of 2026-08-30.
+Current status as of 2026-09-19.
 
 ## Current Focus
-Audit issue #63 fully remediated (final items #8/#9 committed as 22f077d). This session: refactor of legacy CLI `record_from_microphone()` (audit #3) into three extracted helpers — `_capture_microphone_recording`, `_persist_recording`, `_report_recording_result` — leaving the orchestrator ~60 lines. Behavior preserved exactly (output text, error handling, exit codes, file cleanup semantics). 147 tests pass.
+Partial-transcription bug (43-min Zoom m4a, 24 MB) diagnosed and fixed. Root cause was STT-side truncation of very long single uploads, proven by a raw-mode comparison run (raw 19.056 chars = english 18.805 chars, same mid-sentence cutoff). `chunk_audio` now also splits by duration. Full meeting transcribes completely (raw ID 2012, 19.515 chars, ends with the recording's actual last words). 152 tests pass, 1 skipped.
 
 ## Completed (this cycle)
-- [x] record_from_microphone refactor: extracted _capture_microphone_recording (state dict, listener/terminal setup, typer.Exit(1) error path, cancel/empty → None), _persist_recording (compress + raw-WAV cleanup), _report_recording_result (output + prompt_manager.add_prompt); orchestrator keeps banner, _write_wav outside try, and the except/else file-retention semantics; 9 new tests in test_cli.py (147 total pass)
-- [x] core.py #8/#9: chunk_audio computes `-segment_time` from max_size_mb/duration instead of fixed 600s; compress_audio output verification; transcribe_audio file-existence guard; 6 new tests + 3 updated in test_core.py (21 core tests, 138 total pass)
-- [x] TUI launch behavior: starts in Command Mode (AUTO_FOCUS=None, _focus_initial_widget removed), recording mode always starts microphone (TRANSCRIBE_SOURCE removed from config/code/docs), startup summary backfill no longer leaves [x] tick (success → pending, errors still visible); 132 tests pass
-- [x] Config file renamed to `aitranscribe.conf` (main.py CONFIG_FILE, test fixtures, README, config.example); user's file renamed on disk, keys verified intact; no auto-migration (manual rename required for other users)
-- [x] TUI cleanup-mode label changed to "Cleanup Only" (mode key `cleanup` unchanged)
-- [x] Prompt port from ../polished-recognition (prompts.json → _DEFAULT_PROMPTS_TOML; build_post_process_messages gains source_language param; _validate_prompts requires post_process.system.prompt)
-- [x] core.transcribe_audio switched to verbose_json, returns tuple (text, language); run_transcription_pipeline passes first known chunk language to build_post_process_messages
-- [x] Prior cycle: #63 audit remediation (#62/#67–#72) complete and user-verified
+- [x] Raw-mode suspicion cleared: `process_file_for_tui` with `pre_process_mode='raw'` provably bypasses the LLM (2 new CLI proof tests, 1 TUI pilot test clicking the raw radio into `collect_settings`); pipeline now reports `post_process: skipped` instead of misleading `done` in raw mode
+- [x] `chunk_audio(file_path, max_size_mb=25, max_duration_s=600)`: segment_time = min(size-derived, duration-derived even split), 60s floor kept; ffprobe failure falls back to size-only decision (small-file passthrough preserved); matches README's "25 MB or 10-minute segments" claim
+- [x] 3 new duration-chunking tests in test_core.py (small-but-long splits, duration-vs-size precedence, within-both-limits passthrough); all pre-existing segment-time expectations unchanged
+- [x] Verified end-to-end: 6 chunks, per-chunk volumedetect (chunk0 = leading silence → Thank-you hallucinations), chunk5 (4.8s) holds the true last words; /tmp chunks cleaned up by pipeline
+- [x] PITFALLS.md: headless-pytest XAUTHORITY recipe, STT long-upload truncation, leading-silence hallucinations, english-mode minutes restructuring
 
 ## Pending
-- None open
+- None open (changes uncommitted — commit/push on user request)
 
 ## Blockers
 - None
 
 ## Next Session Suggestion
-Nothing open. The #63 audit is fully closed. Optional future work: legacy CLI `transcribe_file()` integration coverage (audit #18, low value); #14 hardcoded `/tmp/issue.md`.
+Optional: silence-trimming or hallucination filtering for leading-silence chunks; prompt tuning if english-mode minutes style is unwanted (currently restructures + relocates passages).

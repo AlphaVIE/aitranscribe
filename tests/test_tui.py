@@ -863,6 +863,34 @@ async def test_refresh_history_requests_full_history_list():
 
 
 @pytest.mark.anyio
+async def test_preprocess_radio_selection_reaches_file_settings():
+    """Clicking 'Raw transcription' must land in collect_settings (file path uses it)."""
+    from unittest.mock import Mock
+
+    prompt_manager = Mock()
+    prompt_manager.count_prompts.return_value = 0
+    prompt_manager.recent_prompts.return_value = []
+
+    app = AitranscribeTUI(
+        prompt_manager=prompt_manager,
+        process_audio=Mock(),
+        process_file=Mock(),
+        stt_provider_name="Groq",
+        llm_provider_name="openrouter",
+        default_stt_model="whisper",
+        default_llm_model="gpt",
+        initial_settings={"pre_process_mode": "english", "input_source": "file"},
+        persist_setting=Mock(),
+    )
+
+    async with app.run_test() as pilot:
+        assert app.pre_process_mode == "english"
+        await pilot.click("#mode-raw")
+        assert app.pre_process_mode == "raw"
+        assert app.collect_settings()["pre_process_mode"] == "raw"
+
+
+@pytest.mark.anyio
 async def test_file_path_input_accepts_keyboard_entry():
     prompt_manager = Mock()
     prompt_manager.count_prompts.return_value = 0

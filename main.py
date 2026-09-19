@@ -898,7 +898,7 @@ def run_transcription_pipeline(
         final_text = process_with_llm(require_llm_client(), messages, llm_model)
         feedback("post_process", "done")
     else:
-        feedback("post_process", "done")
+        feedback("post_process", "skipped")
 
     return final_text, raw_text
 
