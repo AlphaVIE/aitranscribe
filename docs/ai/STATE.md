@@ -1,6 +1,9 @@
 # Project State
 
-Current status as of 2026-09-19.
+Current status as of 2026-09-21.
+
+## Current Focus
+Prompt transplant from polished-recognition implemented and pushed (#73, 58b1301): hardened translate clause + injection guard + legacy prompts.toml auto-upgrade. Full pytest still needs a run on the dev machine (not runnable on this host).
 
 ## Current Focus
 Partial-transcription bug (43-min Zoom m4a, 24 MB) diagnosed and fixed. Root cause was STT-side truncation of very long single uploads, proven by a raw-mode comparison run (raw 19.056 chars = english 18.805 chars, same mid-sentence cutoff). `chunk_audio` now also splits by duration. Full meeting transcribes completely (raw ID 2012, 19.515 chars, ends with the recording's actual last words). 152 tests pass, 1 skipped.
