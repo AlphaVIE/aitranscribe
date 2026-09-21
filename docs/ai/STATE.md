@@ -3,26 +3,15 @@
 Current status as of 2026-09-21.
 
 ## Current Focus
-Tool restored to working order on dell after system Python upgrade to 3.14: venv rebuilt (python3 -m venv --without-pip + get-pip.py; 3.14 wheels fine, 3.12 dev headers missing), user `prompts.toml` migrated to new `[post_process.system]` structure (old file backed up as prompts.toml.bak-oldstyle), real API keys restored into `aitranscribe.conf` from the pre-rename `config` file (conf had been recreated with placeholders and duplicate comment blocks; backed up as aitranscribe.conf.bak-duplicated). 146 tests pass, 1 skipped on dell.
+- PR #77 (`fix/audio-chunking-windows`) fixes large media preparation and misleading FFmpeg duration errors on Windows. It is independent of open PR #76 for quoted file paths.
+- The reported `interview.mp3` is a 2.36 GiB MP4 container with H.264 video and AAC audio. Large filesystem inputs are converted directly to 32 kbps audio before chunking, without copying the video to a second 2.36 GiB temp file.
+- FFmpeg 9.0.1 was installed locally via WinGet. Existing terminal sessions need a restart to see the updated PATH.
 
-## Current Focus
-Prompt transplant from polished-recognition implemented and pushed (#73, 58b1301): hardened translate clause + injection guard + legacy prompts.toml auto-upgrade. Full pytest still needs a run on the dev machine (not runnable on this host).
+## Verification
+- `tests/test_core.py`: 28 passed.
+- Focused core/CLI tests: 26 passed.
+- Local preparation of the reported file: 2,538,059,829-byte source -> 9,368,313-byte MP3 audio -> four chunks of roughly 2.34 MB. No STT or LLM request was made.
+- The full Windows suite has known unrelated SQLite cleanup failures (`WinError 32`).
 
-## Current Focus
-Partial-transcription bug (43-min Zoom m4a, 24 MB) diagnosed and fixed. Root cause was STT-side truncation of very long single uploads, proven by a raw-mode comparison run (raw 19.056 chars = english 18.805 chars, same mid-sentence cutoff). `chunk_audio` now also splits by duration. Full meeting transcribes completely (raw ID 2012, 19.515 chars, ends with the recording's actual last words). 152 tests pass, 1 skipped.
-
-## Completed (this cycle)
-- [x] Raw-mode suspicion cleared: `process_file_for_tui` with `pre_process_mode='raw'` provably bypasses the LLM (2 new CLI proof tests, 1 TUI pilot test clicking the raw radio into `collect_settings`); pipeline now reports `post_process: skipped` instead of misleading `done` in raw mode
-- [x] `chunk_audio(file_path, max_size_mb=25, max_duration_s=600)`: segment_time = min(size-derived, duration-derived even split), 60s floor kept; ffprobe failure falls back to size-only decision (small-file passthrough preserved); matches README's "25 MB or 10-minute segments" claim
-- [x] 3 new duration-chunking tests in test_core.py (small-but-long splits, duration-vs-size precedence, within-both-limits passthrough); all pre-existing segment-time expectations unchanged
-- [x] Verified end-to-end: 6 chunks, per-chunk volumedetect (chunk0 = leading silence → Thank-you hallucinations), chunk5 (4.8s) holds the true last words; /tmp chunks cleaned up by pipeline
-- [x] PITFALLS.md: headless-pytest XAUTHORITY recipe, STT long-upload truncation, leading-silence hallucinations, english-mode minutes restructuring
-
-## Pending
-- None open (changes uncommitted — commit/push on user request)
-
-## Blockers
-- None
-
-## Next Session Suggestion
-Optional: silence-trimming or hallucination filtering for leading-silence chunks; prompt tuning if english-mode minutes style is unwanted (currently restructures + relocates passages).
+## Working Tree
+- This fix lives in a separate worktree from the one used for PR #76.
