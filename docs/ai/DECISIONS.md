@@ -188,3 +188,8 @@ Each entry documents WHAT was decided and WHY.
 - **Reason**: The symlink was dead weight — byte-identical to the global skills, referenced by nothing in the working-tree guidance, and a deletion hazard (trailing-slash `rm -rf` follows the link into the helper repo).
 - **Considered**: Keeping the symlink for discoverability (rejected — `.gitignore` already documented it, and no tooling reads repo-local skills).
 - **Tradeoff**: Historical PITFALLS/DECISIONS lines mandating `skills/`-first no longer apply; PITFALLS now points at the global config instead.
+
+## 2026-09-21: Normalize Quoted File Paths At The Processing Boundary
+- **Choice**: Strip whitespace and one matching outer pair of single or double quotes in a shared `normalize_file_path()` helper used by TUI and CLI file processing.
+- **Reason**: Users paste quoted PowerShell paths into the TUI input; literal quotes make an existing Windows file fail `os.path.exists()`.
+- **Tradeoff**: Paths whose actual filenames begin and end with matching quote characters are interpreted as shell-quoted paths.
