@@ -4,6 +4,7 @@ Coding patterns, naming rules, and style agreements for this project.
 Follow these without question. Do not deviate unless explicitly told.
 
 ## Naming
+- Never include `codex`, `AI`, `KI`, `ChatGPT`, or similar assistant/tool branding in branch names, regardless of capitalization; use descriptive task-based names.
 - LLM prompts are stored in `~/.config/aitranscribe/prompts.toml` (TOML format). All prompt text is configurable; the file is auto-created from embedded defaults if missing.
 - Use `{{variable}}` double-mustache placeholders in prompt templates, resolved via `str.replace()`.
 - Keep user-facing labels for preprocessing modes identical between the `Recording Mode` radio buttons and README/help text.

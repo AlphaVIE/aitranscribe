@@ -3,8 +3,9 @@
 Current status as of 2026-09-21.
 
 ## Current Focus
-- Quoted audio-file paths in the TUI and CLI are normalized before existence checks on branch `codex/fix-quoted-audio-path`.
-- PR #75 is open from `AlphaVIE/aitranscribe` to `georgernstgraf/aitranscribe`.
+- Quoted audio-file paths in the TUI and CLI are normalized before existence checks on branch `fix/quoted-audio-path`.
+- PR #76 is open from `AlphaVIE/aitranscribe` to `georgernstgraf/aitranscribe`. PR #75 was closed automatically when its head branch was renamed.
+- Branch names must never contain `codex`, `AI`, `KI`, `ChatGPT`, or similar assistant/tool branding. This preference is also stored globally in `C:\Users\Arman\.codex\AGENTS.md`.
 
 ## Verification
 - The reported Windows audio path exists locally; its quoted form previously failed the TUI existence check.
