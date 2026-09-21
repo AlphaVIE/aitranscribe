@@ -1,5 +1,12 @@
 # Handoff
 
+## 2026-09-21 session: repo hygiene dirt cleanup (#74, pushed as e6ea800)
+- `skills/` symlink removed (was a link into opencode-helpers, not a copy); stale skills/ mandates in PITFALLS/DECISIONS updated to global skill resolution.
+- Staged AGENTS.md lean rewrite committed (was already the effective instructions).
+- Stale 4-line tui.py select/refresh tweak reverted (origin TUI is far newer).
+- Incident: `rm -rf skills/` with trailing slash emptied the helper repo's skills first — fully recovered via `git checkout`, nothing pushed there. Pitfall recorded.
+- Tree fully clean. Issue #74 left open pending owner close decision.
+
 ## 2026-09-21 session: prompt transplant from polished-recognition (#73 CLOSED, pushed as 58b1301)
 - `[post_process.translate]` default hardened to the sister project's #56 clause; `[post_process.system]` gains the injection-guard line (restores pre-port core.py protection).
 - `_load_prompts()` auto-upgrades pristine legacy values (full-pristine files rewritten, customized files upgraded in memory with notice); 5 new tests in tests/test_cli.py, 2 expectations updated.
