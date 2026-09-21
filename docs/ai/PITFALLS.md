@@ -3,7 +3,7 @@
 Things that do not work, subtle bugs, and non-obvious constraints.
 Read this file carefully before making changes in affected areas.
 
-- **CRITICAL**: This project uses opencode-helpers skills from `skills/` directory ONLY. OpenClaw bundled skills (github, gh-issues, weather, etc.) are FORBIDDEN despite appearing in `available_skills`. Always check `skills/` first.
+- **CRITICAL**: Skills resolve via the global opencode config (`~/.config/opencode/skills`, itself a symlink into the `opencode-helpers` repo) through the `skill` tool. There is NO repo-local `skills/` directory (the old gitignored symlink was removed 2026-09-21). OpenClaw bundled skills (github, gh-issues, weather, etc.) are FORBIDDEN despite appearing in `available_skills`.
 - Setting the user's terminal title from inside opencode does NOT work by printing the OSC sequence to stdout — opencode pipes the shell output, so the escape code never reaches the terminal. Working method: find the opencode PID whose cwd matches the repo (`ls -l /proc/<pid>/cwd` for each opencode PID from `ps -eo pid,tty,cmd | grep opencode`), map it to its pts device, then write directly: `printf '\033]2;<title>\007' > /dev/pts/N`. Verified working on gnome-terminal (VTE) under Wayland.
 - Do not pass Markdown backticks unescaped inside `gh issue create --body "..."`; the shell will treat them as command substitution.
 - `runner.invoke(app, [])` does not preserve a reliable `sys.argv` shape for default-mode detection, so default TUI launch logic must be inferred from parsed option values instead.
@@ -22,6 +22,7 @@ Read this file carefully before making changes in affected areas.
 - A forced `height: 1` override on `Textual` `Input` widgets can break practical text entry; keep file-path entry using the default input behavior.
 - When using `gh issue create` or `gh issue comment` from Bash, do not put backticks inside a double-quoted `--body`; the shell will execute them unless you use a heredoc or otherwise escape them.
 - Never pass a pre-existing file under `/tmp/opencode/` to `gh issue create --body-file` without reading it first; stale files from other sessions get silently attached as the issue body. Always verify with `gh issue view` after creating.
+- Never `rm -rf <path>/` with a trailing slash before running `readlink`/`ls -la` on it: on a symlink-to-directory the trailing slash follows the link and wipes the TARGET's contents (2026-09-21: emptied `opencode-helpers/skills/`, recovered via `git checkout`). Likewise, `diff -rq a/ b/` is vacuous when both paths resolve to the same directory — always compare canonical paths first.
 - `OptionList.size.width` can be misleading on the initial TUI render; use live content-region widths with a fallback to avoid premature ellipses in history rows at startup.
 - The sidebar height bug was not caused by the outer sidebar container; the real fix is to make `#history_panel` itself `1fr` and leave `Recording Mode` and `Configuration` at fixed/auto heights.
 - Mouse-driven focus changes in the `Textual` TUI can leave the visible mode indicator stale unless focus-change events explicitly refresh the state field.

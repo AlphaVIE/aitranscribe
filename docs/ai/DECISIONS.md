@@ -182,3 +182,9 @@ Each entry documents WHAT was decided and WHY.
 - **Reason**: The sister project measured 7/10 target-language compliance with the soft wording (failures on German-source dictation) — directly relevant to our default `english` mode. The guard closes prompt-injection via dictated text.
 - **Considered**: Text-only default change with manual prompts.toml regeneration (rejected — existing installs would silently keep the weak clause); full-file version stamp (rejected — overkill for two values).
 - **Tradeoff**: `_load_prompts()` auto-upgrades pristine legacy values: fully pristine files are rewritten from the template, partially customized files upgrade in memory with a console notice. Old defaults live on as `_LEGACY_*` constants until the next prompt change.
+
+## 2026-09-21: Retire Workspace skills/ Symlink; Skills Resolve Globally
+- **Choice**: Remove the gitignored `skills/` symlink (`-> ../opencode-helpers/skills`) from the repo; skills load via the `skill` tool from the global opencode config. Supersedes the 2026-03-27 PRE-CHECK approach (workspace `skills/` directory) and the AGENTS.md rewrite commits it.
+- **Reason**: The symlink was dead weight — byte-identical to the global skills, referenced by nothing in the working-tree guidance, and a deletion hazard (trailing-slash `rm -rf` follows the link into the helper repo).
+- **Considered**: Keeping the symlink for discoverability (rejected — `.gitignore` already documented it, and no tooling reads repo-local skills).
+- **Tradeoff**: Historical PITFALLS/DECISIONS lines mandating `skills/`-first no longer apply; PITFALLS now points at the global config instead.
