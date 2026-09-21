@@ -48,6 +48,11 @@ try:
         restore_terminal_title,
         PROMPTS,
         PromptManager,
+        _DEFAULT_PROMPTS_TOML,
+        _LEGACY_POST_PROCESS_TRANSLATE,
+        _INJECTION_GUARD_LINE,
+        _load_prompts,
+        _upgrade_legacy_prompt_defaults,
     )
 except ImportError as e:
     pytest.fail(f"Failed to import the CLI app due to missing dependencies: {e}")
@@ -214,7 +219,7 @@ def test_build_post_process_messages_with_translate():
     assert len(messages) == 2
     assert messages[1]["content"] == "Hallo Welt"
     assert "Clean up the transcription" in messages[0]["content"]
-    assert "Please produce the output in English." in messages[0]["content"]
+    assert "IMPORTANT: Write your output in English, regardless of the language of the transcription." in messages[0]["content"]
     assert "{{target_language_clause}}" not in messages[0]["content"]
 
 
@@ -239,6 +244,79 @@ def test_build_post_process_messages_collapses_blank_lines():
     assert "\n\n\n" not in messages[0]["content"]
     assert not messages[0]["content"].startswith("\n")
     assert not messages[0]["content"].endswith("\n")
+
+
+def _legacy_prompts_toml() -> str:
+    """Reconstruct the pre-#73 default prompts file (soft translate clause, no guard)."""
+    text = _DEFAULT_PROMPTS_TOML.replace(
+        '"IMPORTANT: Write your output in {{target_language}}, '
+        'regardless of the language of the transcription."',
+        '"' + _LEGACY_POST_PROCESS_TRANSLATE + '"',
+    )
+    assert _LEGACY_POST_PROCESS_TRANSLATE in text
+    text = text.replace(_INJECTION_GUARD_LINE + "\n", "")
+    assert _INJECTION_GUARD_LINE not in text
+    return text
+
+
+def test_default_translate_clause_is_hardened():
+    """The embedded default uses the sister project's #56 hardened translate clause."""
+    import tomllib
+    data = tomllib.loads(_DEFAULT_PROMPTS_TOML)
+    assert data["post_process"]["translate"]["prompt"] == (
+        "IMPORTANT: Write your output in {{target_language}}, "
+        "regardless of the language of the transcription."
+    )
+
+
+def test_default_system_prompt_has_injection_guard():
+    """The embedded default post-process system prompt keeps the injection guard."""
+    import tomllib
+    data = tomllib.loads(_DEFAULT_PROMPTS_TOML)
+    assert _INJECTION_GUARD_LINE in data["post_process"]["system"]["prompt"]
+
+
+def test_load_prompts_rewrites_pristine_legacy_file(monkeypatch, tmp_path):
+    """A fully pristine legacy prompts.toml is refreshed from the current template."""
+    import main
+    prompts_file = tmp_path / "prompts.toml"
+    prompts_file.write_text(_legacy_prompts_toml())
+    monkeypatch.setattr(main, "PROMPTS_CONFIG", prompts_file)
+    monkeypatch.setattr(main, "CONFIG_DIR", tmp_path)
+    data = _load_prompts()
+    assert prompts_file.read_text() == _DEFAULT_PROMPTS_TOML
+    assert "IMPORTANT: Write your output" in data["post_process"]["translate"]["prompt"]
+    assert _INJECTION_GUARD_LINE in data["post_process"]["system"]["prompt"]
+
+
+def test_load_prompts_upgrades_customized_file_in_memory_only(monkeypatch, tmp_path):
+    """User customizations survive; pristine legacy values upgrade in memory."""
+    import main
+    legacy = _legacy_prompts_toml().replace(
+        "Create a concise summary of the transcription in 70 to 80 characters.",
+        "Summarize briefly, my way.",
+    )
+    prompts_file = tmp_path / "prompts.toml"
+    prompts_file.write_text(legacy)
+    monkeypatch.setattr(main, "PROMPTS_CONFIG", prompts_file)
+    monkeypatch.setattr(main, "CONFIG_DIR", tmp_path)
+    data = _load_prompts()
+    assert prompts_file.read_text() == legacy
+    assert "IMPORTANT: Write your output" in data["post_process"]["translate"]["prompt"]
+    assert _INJECTION_GUARD_LINE in data["post_process"]["system"]["prompt"]
+    assert "Summarize briefly, my way." in data["summary"]["user"]["template"]
+
+
+def test_load_prompts_current_file_untouched(monkeypatch, tmp_path):
+    """A current-template file is neither rewritten nor flagged."""
+    import main
+    prompts_file = tmp_path / "prompts.toml"
+    prompts_file.write_text(_DEFAULT_PROMPTS_TOML)
+    monkeypatch.setattr(main, "PROMPTS_CONFIG", prompts_file)
+    monkeypatch.setattr(main, "CONFIG_DIR", tmp_path)
+    data = _load_prompts()
+    assert prompts_file.read_text() == _DEFAULT_PROMPTS_TOML
+    assert _upgrade_legacy_prompt_defaults(data) == []
 
 
 def test_build_summary_messages():
@@ -433,7 +511,7 @@ def test_run_transcription_pipeline_llm_post_process():
     mock_llm.assert_called_once()
     messages = mock_llm.call_args[0][1]
     assert "spoken in German." in messages[0]["content"]
-    assert "Please produce the output in English." in messages[0]["content"]
+    assert "IMPORTANT: Write your output in English, regardless of the language of the transcription." in messages[0]["content"]
 
 def test_run_transcription_pipeline_feedback_and_transcript_callbacks():
     feedback_events: list[tuple[str, str]] = []
