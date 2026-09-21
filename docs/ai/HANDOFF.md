@@ -1,10 +1,9 @@
 # Handoff
 
-## 2026-09-21 session: prompt transplant from polished-recognition (#73, pushed as 58b1301)
+## 2026-09-21 session: prompt transplant from polished-recognition (#73 CLOSED, pushed as 58b1301)
 - `[post_process.translate]` default hardened to the sister project's #56 clause; `[post_process.system]` gains the injection-guard line (restores pre-port core.py protection).
 - `_load_prompts()` auto-upgrades pristine legacy values (full-pristine files rewritten, customized files upgraded in memory with notice); 5 new tests in tests/test_cli.py, 2 expectations updated.
-- Verification: full pytest NOT runnable on this host (no venv/pytest/deps/X) — verified via py_compile + a 28-check harness exec'ing the real prompt functions from main.py (template validity, builders, pristine/customized/fully-custom migration, validation). Full suite (`venv/bin/pytest`) still needs a run on the dev machine.
-- Issue #73 left OPEN pending that full-suite run.
+- Verification: full suite run on fresh venv under `xvfb-run` (1b0c559 knowledge): 156 passed, 1 skipped, 1 failed — the failure (`test_cli_file_missing_arg`) is pre-existing/environmental (needs valid GROQ_API_KEY in real config; fails identically on unmodified baseline). Issue #73 CLOSED per owner.
 - Pre-existing uncommitted dirt NOT touched: AGENTS.md, tui.py modifications + untracked skills/.
 
 Previous state:
