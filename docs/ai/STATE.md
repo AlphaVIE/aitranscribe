@@ -3,6 +3,9 @@
 Current status as of 2026-09-21.
 
 ## Current Focus
+Tool restored to working order on dell after system Python upgrade to 3.14: venv rebuilt (python3 -m venv --without-pip + get-pip.py; 3.14 wheels fine, 3.12 dev headers missing), user `prompts.toml` migrated to new `[post_process.system]` structure (old file backed up as prompts.toml.bak-oldstyle), real API keys restored into `aitranscribe.conf` from the pre-rename `config` file (conf had been recreated with placeholders and duplicate comment blocks; backed up as aitranscribe.conf.bak-duplicated). 146 tests pass, 1 skipped on dell.
+
+## Current Focus
 Prompt transplant from polished-recognition implemented and pushed (#73, 58b1301): hardened translate clause + injection guard + legacy prompts.toml auto-upgrade. Full pytest still needs a run on the dev machine (not runnable on this host).
 
 ## Current Focus
