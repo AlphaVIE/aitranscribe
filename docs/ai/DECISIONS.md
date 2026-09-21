@@ -188,3 +188,8 @@ Each entry documents WHAT was decided and WHY.
 - **Reason**: The symlink was dead weight — byte-identical to the global skills, referenced by nothing in the working-tree guidance, and a deletion hazard (trailing-slash `rm -rf` follows the link into the helper repo).
 - **Considered**: Keeping the symlink for discoverability (rejected — `.gitignore` already documented it, and no tooling reads repo-local skills).
 - **Tradeoff**: Historical PITFALLS/DECISIONS lines mandating `skills/`-first no longer apply; PITFALLS now points at the global config instead.
+
+## 2026-09-21: Convert Large Files To Audio Before Chunking
+- **Choice**: Filesystem inputs above the 25 MB upload threshold are converted directly to a 32 kbps MP3 audio stream before duration-based chunking. TUI and CLI share the preparation function.
+- **Reason**: A 2.36 GiB MP4 video mislabeled `.mp3` cannot be split safely by its video bitrate, and copying it first wastes disk space.
+- **Tradeoff**: Large audio files are re-encoded once before transcription; the smaller output makes chunk sizes predictable.
