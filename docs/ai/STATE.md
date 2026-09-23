@@ -3,26 +3,14 @@
 Current status as of 2026-09-21.
 
 ## Current Focus
-Tool restored to working order on dell after system Python upgrade to 3.14: venv rebuilt (python3 -m venv --without-pip + get-pip.py; 3.14 wheels fine, 3.12 dev headers missing), user `prompts.toml` migrated to new `[post_process.system]` structure (old file backed up as prompts.toml.bak-oldstyle), real API keys restored into `aitranscribe.conf` from the pre-rename `config` file (conf had been recreated with placeholders and duplicate comment blocks; backed up as aitranscribe.conf.bak-duplicated). 146 tests pass, 1 skipped on dell.
+- Quoted audio-file paths in the TUI and CLI are normalized before existence checks on branch `fix/quoted-audio-path`.
+- PR #76 is open from `AlphaVIE/aitranscribe` to `georgernstgraf/aitranscribe`. PR #75 was closed automatically when its head branch was renamed.
+- Branch names must never contain `codex`, `AI`, `KI`, `ChatGPT`, or similar assistant/tool branding. This preference is also stored globally in `C:\Users\Arman\.codex\AGENTS.md`.
 
-## Current Focus
-Prompt transplant from polished-recognition implemented and pushed (#73, 58b1301): hardened translate clause + injection guard + legacy prompts.toml auto-upgrade. Full pytest still needs a run on the dev machine (not runnable on this host).
+## Verification
+- The reported Windows audio path exists locally; its quoted form previously failed the TUI existence check.
+- New focused tests: 3 passed (`tests/test_cli.py -k "quoted_path or normalize_file_path"`).
+- Full Windows suite is not green because existing SQLite tests attempt to unlink still-open temporary databases (`WinError 32`); first failure occurs after 57 passes in `tests/test_cli.py`.
 
-## Current Focus
-Partial-transcription bug (43-min Zoom m4a, 24 MB) diagnosed and fixed. Root cause was STT-side truncation of very long single uploads, proven by a raw-mode comparison run (raw 19.056 chars = english 18.805 chars, same mid-sentence cutoff). `chunk_audio` now also splits by duration. Full meeting transcribes completely (raw ID 2012, 19.515 chars, ends with the recording's actual last words). 152 tests pass, 1 skipped.
-
-## Completed (this cycle)
-- [x] Raw-mode suspicion cleared: `process_file_for_tui` with `pre_process_mode='raw'` provably bypasses the LLM (2 new CLI proof tests, 1 TUI pilot test clicking the raw radio into `collect_settings`); pipeline now reports `post_process: skipped` instead of misleading `done` in raw mode
-- [x] `chunk_audio(file_path, max_size_mb=25, max_duration_s=600)`: segment_time = min(size-derived, duration-derived even split), 60s floor kept; ffprobe failure falls back to size-only decision (small-file passthrough preserved); matches README's "25 MB or 10-minute segments" claim
-- [x] 3 new duration-chunking tests in test_core.py (small-but-long splits, duration-vs-size precedence, within-both-limits passthrough); all pre-existing segment-time expectations unchanged
-- [x] Verified end-to-end: 6 chunks, per-chunk volumedetect (chunk0 = leading silence → Thank-you hallucinations), chunk5 (4.8s) holds the true last words; /tmp chunks cleaned up by pipeline
-- [x] PITFALLS.md: headless-pytest XAUTHORITY recipe, STT long-upload truncation, leading-silence hallucinations, english-mode minutes restructuring
-
-## Pending
-- None open (changes uncommitted — commit/push on user request)
-
-## Blockers
-- None
-
-## Next Session Suggestion
-Optional: silence-trimming or hallucination filtering for leading-silence chunks; prompt tuning if english-mode minutes style is unwanted (currently restructures + relocates passages).
+## Working Tree
+- Pre-existing user changes in `config.example` and untracked `~/` remain untouched.
