@@ -189,6 +189,11 @@ Each entry documents WHAT was decided and WHY.
 - **Considered**: Keeping the symlink for discoverability (rejected — `.gitignore` already documented it, and no tooling reads repo-local skills).
 - **Tradeoff**: Historical PITFALLS/DECISIONS lines mandating `skills/`-first no longer apply; PITFALLS now points at the global config instead.
 
+## 2026-09-21: Normalize Quoted File Paths At The Processing Boundary
+- **Choice**: Strip whitespace and one matching outer pair of single or double quotes in a shared `normalize_file_path()` helper used by TUI and CLI file processing.
+- **Reason**: Users paste quoted PowerShell paths into the TUI input; literal quotes make an existing Windows file fail `os.path.exists()`.
+- **Tradeoff**: Paths whose actual filenames begin and end with matching quote characters are interpreted as shell-quoted paths.
+
 ## 2026-09-21: Convert Large Files To Audio Before Chunking
 - **Choice**: Filesystem inputs above the 25 MB upload threshold are converted directly to a 32 kbps MP3 audio stream before duration-based chunking. TUI and CLI share the preparation function.
 - **Reason**: A 2.36 GiB MP4 video mislabeled `.mp3` cannot be split safely by its video bitrate, and copying it first wastes disk space.

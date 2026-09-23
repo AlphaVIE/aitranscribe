@@ -1,17 +1,23 @@
 # Project State
 
-Current status as of 2026-09-21.
+Current status as of 2026-09-23.
 
 ## Current Focus
-- PR #77 (`fix/audio-chunking-windows`) fixes large media preparation and misleading FFmpeg duration errors on Windows. It is independent of open PR #76 for quoted file paths.
-- The reported `interview.mp3` is a 2.36 GiB MP4 container with H.264 video and AAC audio. Large filesystem inputs are converted directly to 32 kbps audio before chunking, without copying the video to a second 2.36 GiB temp file.
-- FFmpeg 9.0.1 was installed locally via WinGet. Existing terminal sessions need a restart to see the updated PATH.
+Both community PRs from AlphaVIE are merged to main (PR #76 as bfc3e05; PR #77 merged with a local conflict resolution on the PR branch).
 
-## Verification
-- `tests/test_core.py`: 28 passed.
-- Focused core/CLI tests: 26 passed.
-- Local preparation of the reported file: 2,538,059,829-byte source -> 9,368,313-byte MP3 audio -> four chunks of roughly 2.34 MB. No STT or LLM request was made.
-- The full Windows suite has known unrelated SQLite cleanup failures (`WinError 32`).
+- Quoted file paths: `normalize_file_path()` strips one matching outer quote pair before TUI and CLI file processing.
+- Large media: filesystem inputs over 25 MB are converted directly to a 32 kbps MP3 audio stream (`compress_audio` now uses `-map 0:a:0 -vn`, shared `prepare_file_for_transcription()` for TUI + CLI) before duration-based chunking, so a 2.36 GiB MP4 mislabeled `.mp3` no longer gets copied whole or split by video bitrate.
+- Missing `ffmpeg`/`ffprobe` now raise actionable install messages instead of the misleading `invalid duration (0.0s)`.
+- `chunk_audio` uses `ceil` for the duration-derived segment, avoiding a tiny trailing chunk.
 
-## Working Tree
-- This fix lives in a separate worktree from the one used for PR #76.
+## Verification (on merged main)
+- PR #76 branch: 160 passed, 1 skipped.
+- PR #77 branch: 163 passed, 1 skipped.
+- Full suite re-run on merged main (see session log).
+
+## Blockers
+- None.
+
+## Next Session Suggestion
+- Watch item from #77 review: for a small-but-long file where `ffprobe` fails, `chunk_audio` returns the file unsplit (narrow re-introduction of the truncation bug) — consider warning instead.
+- Temp copies/compressed MP3s still accumulate in the system temp dir (pre-existing).

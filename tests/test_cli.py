@@ -603,6 +603,32 @@ def test_prepare_file_for_transcription_copies_small_media(tmp_path):
     assert prepared.endswith(".m4a")
 
 
+@pytest.mark.parametrize("quote", ['"', "'"])
+def test_process_file_for_tui_accepts_quoted_path(tmp_path, quote):
+    """A shell-quoted path pasted into the TUI must resolve to the real file."""
+    import main
+
+    src = tmp_path / "audio with spaces.mp3"
+    src.write_bytes(b"fake-audio")
+    settings = {"pre_process_mode": "raw", "stt_model": "m"}
+    fake_manager = MagicMock()
+    fake_manager.add_prompt.return_value = 7
+    with patch.object(main, "prompt_manager", fake_manager), \
+         patch.object(main, "stt_client", object()), \
+         patch("main.chunk_audio", side_effect=lambda f: [f]), \
+         patch("main.transcribe_audio", return_value=("raw words", None)):
+        result = main.process_file_for_tui(f" {quote}{src}{quote} ", settings)
+
+    assert result["text"] == "raw words"
+    assert Path(result["file_path"]).exists()
+
+
+def test_normalize_file_path_preserves_unmatched_quotes():
+    import main
+
+    assert main.normalize_file_path(' "somewhere.mp3') == '"somewhere.mp3'
+
+
 def test_process_file_for_tui_english_mode_uses_llm(tmp_path):
     """Companion: english mode DOES post-process via the LLM (test above is non-vacuous)."""
     import main

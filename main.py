@@ -1018,6 +1018,14 @@ def process_recorded_audio_for_tui(
             os.remove(raw_wav_file)
 
 
+def normalize_file_path(file_path: str) -> str:
+    """Accept paths pasted with a matching pair of shell quotes."""
+    source_file = file_path.strip()
+    if len(source_file) >= 2 and source_file[0] in ("'", '"') and source_file[-1] == source_file[0]:
+        return source_file[1:-1]
+    return source_file
+
+
 def prepare_file_for_transcription(source_file: str) -> str:
     """Copy small files or extract compressed audio from large media files."""
     temp_dir = tempfile.gettempdir()
@@ -1053,7 +1061,7 @@ def process_file_for_tui(
 
     validate_api_keys("post_process" if needs_llm else None)
 
-    source_file = file_path.strip()
+    source_file = normalize_file_path(file_path)
     if not source_file:
         raise ValueError("Enter an audio file path first.")
     if not os.path.exists(source_file):
@@ -1271,6 +1279,7 @@ def main(
 
 def transcribe_file(file_path: str, stt_model: str, llm_model: str, post_process: bool, verbose: bool, english: bool):
     """Transcribe a local audio or video file using Groq STT and optionally process with LLM."""
+    file_path = normalize_file_path(file_path)
     if verbose:
         state["verbose"] = True
 
